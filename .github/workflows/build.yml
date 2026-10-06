@@ -1,41 +1,72 @@
 name: Build APK
 on:
-  push: {branches: [main]}
+  push:
+    branches: [main]
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v4
-        with: {distribution: 'zulu', java-version: '17'}
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.0'
           channel: 'stable'
           cache: true
+
       - name: Init Android scaffold
         run: flutter create --org com.kugou --project-name kugou --platforms=android .
+
       - name: Override manifest
-        run: cp android_manifest.xml android/app/src/main/AndroidManifest.xml
+        run: |
+          if [ -f android_manifest.xml ]; then
+            cp android_manifest.xml android/app/src/main/AndroidManifest.xml
+            echo "✓ manifest 已替换"
+          else
+            echo "! 使用默认 manifest"
+          fi
+
       - name: Deps
         run: flutter pub get
+
       - name: Build
         id: b
         continue-on-error: true
-        run: flutter build apk --release --split-per-abi 2>&1 | tee /tmp/build.log
+        run: flutter build apk --release 2>&1 | tee /tmp/build.log
+
       - name: Upload error log
         if: steps.b.outcome == 'failure'
         uses: actions/upload-artifact@v4
-        with: {name: build-error-log, path: /tmp/build.log}
-      - name: Fail
+        with:
+          name: build-error-log
+          path: /tmp/build.log
+
+      - name: Fail if build failed
         if: steps.b.outcome == 'failure'
         run: exit 1
-      - name: Rename
+
+      - name: Prepare APK
         run: |
           mkdir -p out
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk out/kugou-arm64.apk
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk out/kugou-arm32.apk
-          cp build/app/outputs/flutter-apk/app-x86_64-release.apk out/kugou-x64.apk
+          APK=$(find build/app/outputs/flutter-apk -maxdepth 1 -name "*.apk" -type f | head -1)
+          if [ -z "$APK" ]; then
+            echo "✗ 没有找到 APK"
+            ls -la build/app/outputs/flutter-apk/ || true
+            exit 1
+          fi
+          echo "找到: $APK"
+          cp "$APK" out/KuGou.apk
+          ls -lh out/
+
       - uses: actions/upload-artifact@v4
-        with: {name: kugou-apks, path: out/*.apk}
+        with:
+          name: kugou-apk
+          path: out/KuGou.apk
+          if-no-files-found: error
