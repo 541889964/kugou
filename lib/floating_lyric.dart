@@ -22,7 +22,7 @@ class FloatingLyricService {
       await FlutterOverlayWindow.showOverlay(
         height: 130,
         width: WindowSize.matchParent,
-        alignment: OverlayAlignment.centerBottom,
+        alignment: OverlayAlignment.bottomCenter,
         flag: OverlayFlag.defaultFlag,
         visibility: NotificationVisibility.visibilityPublic,
         enableDrag: true,
@@ -63,7 +63,7 @@ class FloatingLyricService {
       final next = lines.isNotEmpty && idx + 1 < lines.length ? lines[idx + 1].text : '';
 
       try {
-        await FlutterOverlayWindow.updateOverlay({
+        await FlutterOverlayWindow.shareData({
           'cur': cur, 'next': next, 'title': s.name, 'playing': p.playing,
         });
       } catch (_) {}

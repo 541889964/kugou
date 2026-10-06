@@ -14,6 +14,8 @@ class Song {
     this.album = '', this.albumId = '', this.duration = 0,
     this.cover, this.audioId, this.localPath, this.isLocal = false});
 
+  String get title => singer.isEmpty ? name : '\$name - \$singer';
+
   Map<String,dynamic> toJson() => {'hash':hash,'name':name,'singer':singer,
     'album':album,'albumId':albumId,'duration':duration,'cover':cover,'audioId':audioId};
 

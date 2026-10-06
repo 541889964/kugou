@@ -61,12 +61,14 @@ class _OA extends State<_OverlayApp> {
 
 }
 
-void main() {
-  if (FlutterOverlayWindow.isActive()) {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  bool isOverlay = false;
+  try { isOverlay = await FlutterOverlayWindow.isActive(); } catch (_) {}
+  if (isOverlay) {
     runApp(const _OverlayApp());
     return;
   }
-  WidgetsFlutterBinding.ensureInitialized();
   runApp(const KuGouApp());
 }
 

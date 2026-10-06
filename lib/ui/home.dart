@@ -239,6 +239,6 @@ class _Mini extends StatelessWidget {
               icon: Icon(p.playing ? Icons.pause_circle_filled : Icons.play_circle_filled)),
             IconButton(onPressed: p.next, iconSize: 24, icon: const Icon(Icons.skip_next)),
             const SizedBox(width: 4),
-          ]))))));
+          ])))));
   }
 }
