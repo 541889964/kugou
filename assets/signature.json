@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "updated_at": "2025-01-01",
+  "user": {
+    "token": "",
+    "userid": "",
+    "dfid": "",
+    "mid": "",
+    "uuid": "-",
+    "appid": "3116",
+    "clientver": "11590",
+    "kg_fake": ""
+  },
+  "salt": "NVPh5oo715z5DIWAeQlhMDsWXXQV4hwt",
+  "search": {
+    "host": "complexsearch.kugou.com",
+    "path": "/v2/search/song",
+    "srcappid": "2919",
+    "clientver": "2000",
+    "appid": "1014",
+    "platid": "4",
+    "platform_standard": "WebFilter",
+    "platform_lite": "lite"
+  },
+  "song_url": {
+    "songinfo_host": "wwwapi.kugou.com",
+    "songinfo_path": "/play/songinfo",
+    "priv_host": "wwwapi.kugou.com",
+    "priv_path": "/v2/get_res_privilege/lite",
+    "yy_host": "wwwapi.kugou.com",
+    "yy_path": "/yy/index.php"
+  },
+  "lyric": {
+    "search_host": "krcs.kugou.com",
+    "search_path": "/search",
+    "download_host": "krcs.kugou.com",
+    "download_path": "/download"
+  }
+}
