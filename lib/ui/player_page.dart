@@ -23,16 +23,27 @@ class PlayerPage extends StatelessWidget {
     final fav = pl.contains(s);
     final dl = context.watch<Downloader>();
     final t = dl.tasks[s.hash];
+
     return Scaffold(body: Stack(children: [
+      // 壁纸
+      Positioned.fill(child: Image.asset('assets/wallpaper.jpg',
+        fit: BoxFit.cover, errorBuilder: (_, __, ___) => Container(color: AppTheme.bg))),
+      // 封面再叠一层模糊
       if (s.cover != null)
-        Positioned.fill(child: ImageFiltered(
-          imageFilter: ui.ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+        Positioned.fill(child: Opacity(opacity: 0.35, child: ImageFiltered(
+          imageFilter: ui.ImageFilter.blur(sigmaX: 50, sigmaY: 50),
           child: CachedNetworkImage(imageUrl: s.cover!, fit: BoxFit.cover,
-            errorWidget: (_, __, ___) => Container(color: AppTheme.bg)))),
+            errorWidget: (_, __, ___) => const SizedBox())))),
+      // 暗化渐变
       Positioned.fill(child: Container(
         decoration: BoxDecoration(gradient: LinearGradient(
           begin: Alignment.topCenter, end: Alignment.bottomCenter,
-          colors: [AppTheme.bg.withOpacity(0.55), AppTheme.bg.withOpacity(0.88), AppTheme.bg])))),
+          colors: [
+            Colors.black.withOpacity(0.35),
+            Colors.black.withOpacity(0.72),
+            Colors.black.withOpacity(0.92),
+          ])))),
+
       SafeArea(child: Column(children: [
         Padding(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Row(children: [
@@ -64,13 +75,13 @@ class PlayerPage extends StatelessWidget {
           ])),
         const Spacer(flex: 2),
         _RotatingDisc(cover: s.cover, playing: p.playing),
-        const SizedBox(height: 40),
+        const SizedBox(height: 36),
         Padding(padding: const EdgeInsets.symmetric(horizontal: 32),
           child: Column(children: [
             Text(s.name, maxLines: 2, textAlign: TextAlign.center,
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800,
                 letterSpacing: 0.5, color: Colors.white,
-                shadows: [Shadow(color: Colors.black45, blurRadius: 20)])),
+                shadows: [Shadow(color: Colors.black54, blurRadius: 20)])),
             const SizedBox(height: 10),
             Row(mainAxisAlignment: MainAxisAlignment.center, children: [
               if (s.isLocal)
@@ -110,8 +121,7 @@ class PlayerPage extends StatelessWidget {
           IconButton(iconSize: 46, icon: const Icon(Icons.skip_previous),
             color: Colors.white, onPressed: p.prev),
           const SizedBox(width: 12),
-          Container(
-            width: 78, height: 78,
+          Container(width: 78, height: 78,
             decoration: BoxDecoration(shape: BoxShape.circle, gradient: AppTheme.grad,
               boxShadow: [
                 BoxShadow(color: AppTheme.p.withOpacity(0.55), blurRadius: 32, spreadRadius: 2),
@@ -130,7 +140,7 @@ class PlayerPage extends StatelessWidget {
             IconButton(iconSize: 30, icon: Icon(Icons.download_outlined, color: Colors.white70),
               onPressed: () async {
                 final ok = await dl.download(s);
-                if (context.mounted) _toast(context, ok ? '已开始下载' : '下载失败');
+                if (context.mounted) _toast(context, ok ? '已开始下载' : '已存在或失败');
               })
           else if (t.status == 'done')
             const Icon(Icons.check_circle, color: Colors.greenAccent, size: 30)
@@ -158,7 +168,7 @@ class PlayerPage extends StatelessWidget {
             _pill(context, icon: Icons.file_download_outlined, label: '下歌词',
               onTap: () async {
                 final ok = await dl.downloadLyric(s);
-                if (context.mounted) _toast(context, ok ? '歌词已保存到 Music/KuGou/' : '歌词下载失败');
+                if (context.mounted) _toast(context, ok ? '歌词已保存' : '歌词下载失败');
               }),
           ],
         ]),
@@ -168,7 +178,7 @@ class PlayerPage extends StatelessWidget {
   }
   Widget _pill(BuildContext c, {required IconData icon, required String label,
       Color? color, required VoidCallback onTap}) {
-    return Material(color: Colors.white.withOpacity(0.08), borderRadius: BorderRadius.circular(20),
+    return Material(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(20),
       child: InkWell(borderRadius: BorderRadius.circular(20), onTap: onTap,
         child: Padding(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Row(mainAxisSize: MainAxisSize.min, children: [
@@ -234,9 +244,9 @@ class _RotatingDiscState extends State<_RotatingDisc> with SingleTickerProviderS
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 300, height: 300,
+      width: 290, height: 290,
       decoration: BoxDecoration(shape: BoxShape.circle, boxShadow: [
-        BoxShadow(color: AppTheme.p.withOpacity(0.45), blurRadius: 70, spreadRadius: 2),
+        BoxShadow(color: AppTheme.p.withOpacity(0.5), blurRadius: 70, spreadRadius: 2),
         const BoxShadow(color: Colors.black54, blurRadius: 22, offset: Offset(0, 12)),
       ]),
       child: RotationTransition(turns: _c,
@@ -247,7 +257,7 @@ class _RotatingDiscState extends State<_RotatingDisc> with SingleTickerProviderS
               Color(0xFF181820), Color(0xFF2A2A38), Color(0xFF181820),
               Color(0xFF2A2A38), Color(0xFF181820),
             ]),
-            border: Border.all(color: Colors.white.withOpacity(0.06), width: 8)),
+            border: Border.all(color: Colors.white.withOpacity(0.08), width: 8)),
           padding: const EdgeInsets.all(30),
           child: ClipOval(
             child: widget.cover != null

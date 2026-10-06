@@ -61,6 +61,8 @@ class _HP extends State<HomePage> {
     final r = await KuGouApi.I.search(kw);
     if (!mounted) return;
     setState(() { _l = r; _loading = false; });
+    // 扫描已下载状态
+    Downloader.I.scanDownloaded(r);
     if (r.isEmpty && KuGouApi.I.lastError != null) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(KuGouApi.I.lastError!)));
     }
@@ -68,39 +70,46 @@ class _HP extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     final m = context.watch<ModeManager>();
-    return Scaffold(body: SafeArea(child: Column(children: [
-      Container(
-        margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [
-            (m.isLite ? AppTheme.p : AppTheme.s).withOpacity(0.18),
-            (m.isLite ? AppTheme.p : AppTheme.s).withOpacity(0.05)]),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: (m.isLite ? AppTheme.p : AppTheme.s).withOpacity(0.3))),
-        child: Row(children: [
-          Icon(m.isLite ? Icons.diamond : Icons.music_note, size: 16,
-            color: m.isLite ? AppTheme.p : AppTheme.s),
-          const SizedBox(width: 8),
-          Text(m.isLite ? '概念版' : '普通版',
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-              color: m.isLite ? AppTheme.p : AppTheme.s)),
-          const Spacer(),
-          Text('端口 ${m.port}', style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.5))),
-        ])),
-      Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
-        child: TextField(controller: _c, onSubmitted: (_) => _s(),
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(
-            hintText: '搜索歌曲 / 歌手 / 专辑',
-            prefixIcon: const Icon(Icons.search, size: 20),
-            suffixIcon: _c.text.isNotEmpty
-              ? IconButton(icon: const Icon(Icons.close, size: 18),
-                  onPressed: () => setState(() => _c.clear()))
-              : null),
-          onChanged: (_) => setState(() {}))),
-      Expanded(child: _body()),
-    ])));
+    return Scaffold(body: Stack(children: [
+      // 壁纸背景
+      Positioned.fill(child: Image.asset('assets/wallpaper.jpg',
+        fit: BoxFit.cover, opacity: const AlwaysStoppedAnimation(0.18),
+        errorBuilder: (_, __, ___) => const SizedBox())),
+      Positioned.fill(child: Container(color: Colors.black.withOpacity(0.55))),
+      SafeArea(child: Column(children: [
+        Container(
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [
+              (m.isLite ? AppTheme.p : AppTheme.s).withOpacity(0.25),
+              (m.isLite ? AppTheme.p : AppTheme.s).withOpacity(0.08)]),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: (m.isLite ? AppTheme.p : AppTheme.s).withOpacity(0.4))),
+          child: Row(children: [
+            Icon(m.isLite ? Icons.diamond : Icons.music_note, size: 16,
+              color: m.isLite ? AppTheme.p : AppTheme.s),
+            const SizedBox(width: 8),
+            Text(m.isLite ? '概念版' : '普通版',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
+                color: m.isLite ? AppTheme.p : AppTheme.s)),
+            const Spacer(),
+            Text('端口 ${m.port}', style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.5))),
+          ])),
+        Padding(padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+          child: TextField(controller: _c, onSubmitted: (_) => _s(),
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: '搜索歌曲 / 歌手 / 专辑',
+              prefixIcon: const Icon(Icons.search, size: 20),
+              suffixIcon: _c.text.isNotEmpty
+                ? IconButton(icon: const Icon(Icons.close, size: 18),
+                    onPressed: () => setState(() => _c.clear()))
+                : null),
+            onChanged: (_) => setState(() {}))),
+        Expanded(child: _body()),
+      ])),
+    ]));
   }
   Widget _body() {
     if (_loading) return const Center(child: CircularProgressIndicator());
@@ -108,14 +117,14 @@ class _HP extends State<HomePage> {
       return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
         Container(padding: const EdgeInsets.all(30),
           decoration: BoxDecoration(shape: BoxShape.circle,
-            gradient: AppTheme.grad.withOpacity(0.22),
-            boxShadow: [BoxShadow(color: AppTheme.p.withOpacity(0.3), blurRadius: 50, spreadRadius: 6)]),
-          child: Icon(Icons.headphones, size: 68, color: Colors.white.withOpacity(0.85))),
+            gradient: AppTheme.grad.withOpacity(0.3),
+            boxShadow: [BoxShadow(color: AppTheme.p.withOpacity(0.4), blurRadius: 50, spreadRadius: 6)]),
+          child: Icon(Icons.headphones, size: 68, color: Colors.white.withOpacity(0.9))),
         const SizedBox(height: 26),
         Text('开始你的音乐之旅', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600,
-          color: Colors.white.withOpacity(0.75))),
+          color: Colors.white.withOpacity(0.85))),
         const SizedBox(height: 8),
-        Text('搜索在线音乐，或去「本地」听歌', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.4))),
+        Text('搜索在线音乐，或去「本地」听歌', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.5))),
       ]));
     }
     if (_l.isEmpty) return Center(child: Text('没有找到结果',
@@ -127,9 +136,10 @@ class _HP extends State<HomePage> {
   }
   Widget _card(Song s) => Container(
     margin: const EdgeInsets.symmetric(vertical: 4),
-    decoration: BoxDecoration(color: AppTheme.surface, borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.white.withOpacity(0.04)),
-      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 8, offset: const Offset(0, 2))]),
+    decoration: BoxDecoration(color: AppTheme.surface.withOpacity(0.85),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(color: Colors.white.withOpacity(0.06)),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.35), blurRadius: 8, offset: const Offset(0, 2))]),
     child: Material(color: Colors.transparent, borderRadius: BorderRadius.circular(16),
       child: InkWell(borderRadius: BorderRadius.circular(16),
         onTap: () {
@@ -224,7 +234,7 @@ class _Mini extends StatelessWidget {
             ClipRRect(
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(16), bottomRight: Radius.circular(16)),
-              child: LinearProgressIndicator(value: prog, minHeight: 2.5,
+              child: LinearProgressIndicator(value: prog, minHeight: 3,
                 backgroundColor: Colors.white10,
                 valueColor: const AlwaysStoppedAnimation(AppTheme.p))),
           ]))));

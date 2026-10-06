@@ -27,6 +27,42 @@ class Song {
       ? null : (j['audioId'] ?? j['MixSongID'] ?? j['EMixSongID']).toString());
 }
 
+/// 网易云歌词 API（无需登录）
+class NeteaseApi {
+  static final _dio = Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 8),
+    receiveTimeout: const Duration(seconds: 12),
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0 Safari/537.36',
+      'Referer': 'https://music.163.com/',
+    },
+  ));
+
+  static Future<String?> getLyric(String songName, String singer) async {
+    try {
+      final kw = '$songName ${singer.isEmpty ? "" : singer}'.trim();
+      // 1. 搜索
+      final sr = await _dio.get('https://music.163.com/api/search/get/web',
+        queryParameters: {'s': kw, 'type': 1, 'offset': 0, 'total': 'true', 'limit': 8});
+      final sd = sr.data is String ? jsonDecode(sr.data) : sr.data;
+      final songs = sd?['result']?['songs'] as List?;
+      if (songs == null || songs.isEmpty) return null;
+
+      // 2. 逐个尝试拿歌词（第一个可能没歌词）
+      for (int i = 0; i < songs.length && i < 3; i++) {
+        final id = songs[i]['id'];
+        if (id == null) continue;
+        final lr = await _dio.get('https://music.163.com/api/song/lyric',
+          queryParameters: {'id': id, 'lv': -1, 'kv': -1, 'tv': -1});
+        final ld = lr.data is String ? jsonDecode(lr.data) : lr.data;
+        final lrc = ld?['lrc']?['lyric'] as String?;
+        if (lrc != null && lrc.trim().isNotEmpty) return lrc;
+      }
+      return null;
+    } catch (_) { return null; }
+  }
+}
+
 class KuGouApi {
   static final KuGouApi I = KuGouApi._();
   KuGouApi._();
@@ -47,6 +83,7 @@ class KuGouApi {
       'KG-FAKE=${u['kg_fake'] ?? u['userid'] ?? ""}',
     ].join('; ');
   }
+
   Future<List<Song>> search(String kw, {int page = 1, int pagesize = 30}) async {
     lastError = null;
     try {
@@ -58,11 +95,9 @@ class KuGouApi {
       return lists.whereType<Map>()
         .map((e) => Song.fromJson(Map<String,dynamic>.from(e)))
         .where((s) => s.hash.isNotEmpty).toList();
-    } catch (e) {
-      lastError = '后端未启动: $e';
-      return [];
-    }
+    } catch (e) { lastError = '后端未启动: $e'; return []; }
   }
+
   Future<Map?> getSongUrl(String hash, {String albumId = '', String? audioId}) async {
     try {
       final params = <String,dynamic>{'id': hash};
@@ -80,11 +115,17 @@ class KuGouApi {
         if (d['error_code'] == 20018) return {'error':'VIP_ONLY','message':'切到概念版试试'};
       }
       return {'error':'NO_URL','message':'未返回 URL'};
-    } catch (e) {
-      return {'error':'BACKEND_ERR','message':'后端请求失败: $e'};
-    }
+    } catch (e) { return {'error':'BACKEND_ERR','message':'后端请求失败: $e'}; }
   }
-  Future<String?> getLyric(String hash, {int duration = 0}) async {
+
+  /// 歌词：网易云优先 → 酷狗后端兜底
+  Future<String?> getLyric(String hash, {int duration = 0, String? songName, String? singer}) async {
+    // 1. 网易云
+    if (songName != null && songName.trim().isNotEmpty) {
+      final nj = await NeteaseApi.getLyric(songName, singer ?? '');
+      if (nj != null && nj.trim().isNotEmpty) return nj;
+    }
+    // 2. 酷狗后端
     final tries = <Map<String, dynamic>>[
       {'p': '/lyric', 'q': {'hash': hash, 'id': hash, 'duration': duration, 'decode': 'true', 'fmt': 'lrc'}},
       {'p': '/lyric', 'q': {'hash': hash, 'id': hash}},
@@ -102,6 +143,7 @@ class KuGouApi {
     }
     return null;
   }
+
   dynamic _tryJson(String s) {
     try { return jsonDecode(s); } catch (_) { return s; }
   }
@@ -141,6 +183,7 @@ class KuGouApi {
     }
     return null;
   }
+
   Future<bool> verifyCookie() async {
     final u = SignatureManager.I.config!['user'] as Map;
     return (u['token'] ?? '').toString().length >= 20;
