@@ -50,7 +50,7 @@ class KuGouApi {
   }
 
   String _sign(Map<String, String> p, String salt) {
-    final ks = p.keys.where((k) => k != 'signature' && p[k].isNotEmpty).toList()..sort();
+    final ks = p.keys.where((k) => k != 'signature' && (p[k] ?? '').isNotEmpty).toList()..sort();
     final sb = StringBuffer(salt);
     for (final k in ks) sb.write('$k=${p[k]}');
     sb.write(salt);

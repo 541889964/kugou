@@ -20,27 +20,48 @@ class RootPage extends StatefulWidget {
 
 class _RootPageState extends State<RootPage> {
   int _tab = 0;
+
   @override
   Widget build(BuildContext context) {
     final p = context.watch<PlayerService>();
+    final pages = <Widget>[
+      const HomePage(),
+      const PlaylistPage(),
+      const DownloadsPage(),
+      const SettingsPage(),
+    ];
+
     return Scaffold(
-      body: IndexedStack(index: _tab, children: const [
-        HomePage(), PlaylistPage(), DownloadsPage(), SettingsPage()]),
-      bottomNavigationBar: Column(mainAxisSize: MainAxisSize.min, children: [
-        if (p.current != null) const _MiniPlayer(),
-        NavigationBar(selectedIndex: _tab,
-          onDestinationSelected: (i) => setState(() => _tab = i),
-          destinations: const [
-            NavigationDestination(icon: Icon(Icons.search_outlined),
-              selectedIcon: Icon(Icons.search), label: '搜索'),
-            NavigationDestination(icon: Icon(Icons.favorite_border),
-              selectedIcon: Icon(Icons.favorite), label: '收藏'),
-            NavigationDestination(icon: Icon(Icons.download_outlined),
-              selectedIcon: Icon(Icons.download), label: '下载'),
-            NavigationDestination(icon: Icon(Icons.settings_outlined),
-              selectedIcon: Icon(Icons.settings), label: '设置'),
-          ])),
-      ]));
+      body: IndexedStack(index: _tab, children: pages),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (p.current != null) const MiniPlayerBar(),
+          NavigationBar(
+            selectedIndex: _tab,
+            onDestinationSelected: (i) => setState(() => _tab = i),
+            destinations: const [
+              NavigationDestination(
+                  icon: Icon(Icons.search_outlined),
+                  selectedIcon: Icon(Icons.search),
+                  label: '搜索'),
+              NavigationDestination(
+                  icon: Icon(Icons.favorite_border),
+                  selectedIcon: Icon(Icons.favorite),
+                  label: '收藏'),
+              NavigationDestination(
+                  icon: Icon(Icons.download_outlined),
+                  selectedIcon: Icon(Icons.download),
+                  label: '下载'),
+              NavigationDestination(
+                  icon: Icon(Icons.settings_outlined),
+                  selectedIcon: Icon(Icons.settings),
+                  label: '设置'),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -52,160 +73,365 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final _c = TextEditingController();
-  List<Song> _l = [];
+  List<Song> _list = [];
   bool _loading = false;
   String _kw = '';
 
-  Future<void> _s() async {
-    final kw = _c.text.trim(); if (kw.isEmpty) return;
+  Future<void> _doSearch() async {
+    final kw = _c.text.trim();
+    if (kw.isEmpty) return;
     FocusScope.of(context).unfocus();
-    setState(() { _loading = true; _kw = kw; });
+    setState(() {
+      _loading = true;
+      _kw = kw;
+    });
     final r = await KuGouApi.I.search(kw);
     if (!mounted) return;
-    setState(() { _l = r; _loading = false; });
+    setState(() {
+      _list = r;
+      _loading = false;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final m = context.watch<ModeManager>();
-    return Scaffold(body: SafeArea(child: Column(children: [
-      Container(margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: (m.isLite ? AppTheme.primary : AppTheme.secondary).withOpacity(0.12),
-          borderRadius: BorderRadius.circular(12)),
-        child: Row(children: [
-          Icon(m.isLite ? Icons.diamond_outlined : Icons.music_note_outlined,
-            size: 14, color: m.isLite ? AppTheme.primary : AppTheme.secondary),
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            _modeBar(m),
+            _searchBar(),
+            Expanded(child: _buildBody()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _modeBar(ModeManager m) {
+    final color = m.isLite ? AppTheme.primary : AppTheme.secondary;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            m.isLite ? Icons.diamond_outlined : Icons.music_note_outlined,
+            size: 14,
+            color: color,
+          ),
           const SizedBox(width: 6),
-          Text(m.isLite ? '概念版' : '普通版', style: TextStyle(
-            fontSize: 12, fontWeight: FontWeight.w500,
-            color: m.isLite ? AppTheme.primary : AppTheme.secondary)),
-        ])),
-      Padding(padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        child: TextField(controller: _c, onSubmitted: (_) => _s(),
-          textInputAction: TextInputAction.search,
-          decoration: InputDecoration(hintText: '搜索歌曲 / 歌手',
-            prefixIcon: const Icon(Icons.search, size: 20),
-            suffixIcon: _c.text.isNotEmpty ? IconButton(
-              icon: const Icon(Icons.close, size: 18),
-              onPressed: () => setState(() => _c.clear())) : null),
-          onChanged: (_) => setState(() {}))),
-      Expanded(child: _body()),
-    ])));
+          Text(
+            m.isLite ? '概念版' : '普通版',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
-  Widget _body() {
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_kw.isEmpty) return Center(child: Column(
-      mainAxisAlignment: MainAxisAlignment.center, children: [
-      Icon(Icons.graphic_eq, size: 64, color: Colors.white.withOpacity(0.3)),
-      const SizedBox(height: 16),
-      Text('输入关键词开始搜索', style: TextStyle(color: Colors.white.withOpacity(0.6))),
-    ]));
-    if (_l.isEmpty) return Center(child: Text('没有找到结果',
-      style: TextStyle(color: Colors.white.withOpacity(0.5))));
-    return ListView.builder(padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-      itemCount: _l.length, itemBuilder: (_, i) => _card(_l[i]));
+  Widget _searchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      child: TextField(
+        controller: _c,
+        onSubmitted: (_) => _doSearch(),
+        textInputAction: TextInputAction.search,
+        decoration: InputDecoration(
+          hintText: '搜索歌曲 / 歌手',
+          prefixIcon: const Icon(Icons.search, size: 20),
+          suffixIcon: _c.text.isNotEmpty
+              ? IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  onPressed: () => setState(() => _c.clear()),
+                )
+              : null,
+        ),
+        onChanged: (_) => setState(() {}),
+      ),
+    );
   }
 
-  Widget _card(Song s) => Container(
-    margin: const EdgeInsets.symmetric(vertical: 4),
-    decoration: BoxDecoration(color: AppTheme.surface,
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.white.withOpacity(0.04))),
-    child: Material(color: Colors.transparent, borderRadius: BorderRadius.circular(16),
-      child: InkWell(borderRadius: BorderRadius.circular(16),
-        onTap: () {
-          PlayerService.I.playSong(s, list: _l);
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const PlayerPage()));
-        },
-        child: Padding(padding: const EdgeInsets.all(10),
-          child: Row(children: [
-            _cover(s.cover, 52),
-            const SizedBox(width: 12),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildBody() {
+    if (_loading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (_kw.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.graphic_eq,
+                size: 64, color: Colors.white.withOpacity(0.3)),
+            const SizedBox(height: 16),
+            Text('输入关键词开始搜索',
+                style: TextStyle(color: Colors.white.withOpacity(0.6))),
+          ],
+        ),
+      );
+    }
+    if (_list.isEmpty) {
+      return Center(
+        child: Text('没有找到结果',
+            style: TextStyle(color: Colors.white.withOpacity(0.5))),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      itemCount: _list.length,
+      itemBuilder: (_, i) => _songCard(_list[i]),
+    );
+  }
+
+  Widget _songCard(Song s) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.04)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            PlayerService.I.playSong(s, list: _list);
+            Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const PlayerPage()));
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(10),
+            child: Row(
               children: [
-                Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w500)),
-                const SizedBox(height: 3),
-                Text(s.singer, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.5))),
-              ])),
-            Consumer<Downloader>(builder: (_, dl, __) {
-              final t = dl.tasks[s.hash];
-              if (t != null) {
-                if (t.status == 'done') return const Icon(Icons.check_circle,
-                  color: Colors.greenAccent, size: 22);
-                if (t.status == 'failed') return IconButton(
-                  icon: const Icon(Icons.refresh, color: Colors.redAccent, size: 20),
-                  onPressed: () => dl.download(s));
-                return Padding(padding: const EdgeInsets.all(10),
-                  child: SizedBox(width: 20, height: 20,
-                    child: CircularProgressIndicator(
-                      value: t.progress > 0 ? t.progress : null, strokeWidth: 2)));
-              }
-              return IconButton(icon: Icon(Icons.download_outlined,
-                color: Colors.white.withOpacity(0.5), size: 20),
-                onPressed: () => dl.download(s));
-            }),
-            Consumer<PlaylistService>(builder: (_, pl, __) {
-              final fav = pl.contains(s);
-              return IconButton(icon: Icon(
-                fav ? Icons.favorite : Icons.favorite_border,
-                color: fav ? Colors.redAccent : Colors.white38, size: 20),
-                onPressed: () => pl.toggle(s));
-            }),
-          ])))));
-  Widget _cover(String? u, double s) => Container(width: s, height: s,
-    decoration: BoxDecoration(borderRadius: BorderRadius.circular(12),
-      color: AppTheme.surfaceHigh),
-    child: ClipRRect(borderRadius: BorderRadius.circular(12),
-      child: u != null ? CachedNetworkImage(imageUrl: u, fit: BoxFit.cover,
-        errorWidget: (_, __, ___) => Icon(Icons.music_note,
-          color: Colors.white.withOpacity(0.2), size: s * 0.5))
-        : Icon(Icons.music_note, color: Colors.white.withOpacity(0.2), size: s * 0.5)));
+                _coverWidget(s.cover, 52),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        s.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 14.5, fontWeight: FontWeight.w500),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        s.singer,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white.withOpacity(0.5)),
+                      ),
+                    ],
+                  ),
+                ),
+                _downloadButton(s),
+                _favButton(s),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _downloadButton(Song s) {
+    return Consumer<Downloader>(builder: (_, dl, __) {
+      final t = dl.tasks[s.hash];
+      if (t != null) {
+        if (t.status == 'done') {
+          return const Icon(Icons.check_circle,
+              color: Colors.greenAccent, size: 22);
+        }
+        if (t.status == 'failed') {
+          return IconButton(
+            icon: const Icon(Icons.refresh,
+                color: Colors.redAccent, size: 20),
+            onPressed: () => dl.download(s),
+          );
+        }
+        return Padding(
+          padding: const EdgeInsets.all(10),
+          child: SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(
+              value: t.progress > 0 ? t.progress : null,
+              strokeWidth: 2,
+            ),
+          ),
+        );
+      }
+      return IconButton(
+        icon: Icon(Icons.download_outlined,
+            color: Colors.white.withOpacity(0.5), size: 20),
+        onPressed: () => dl.download(s),
+      );
+    });
+  }
+
+  Widget _favButton(Song s) {
+    return Consumer<PlaylistService>(builder: (_, pl, __) {
+      final fav = pl.contains(s);
+      return IconButton(
+        icon: Icon(
+          fav ? Icons.favorite : Icons.favorite_border,
+          color: fav ? Colors.redAccent : Colors.white38,
+          size: 20,
+        ),
+        onPressed: () => pl.toggle(s),
+      );
+    });
+  }
+
+  Widget _coverWidget(String? url, double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: AppTheme.surfaceHigh,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: url != null
+            ? CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => Icon(Icons.music_note,
+                    color: Colors.white.withOpacity(0.2), size: size * 0.5),
+              )
+            : Icon(Icons.music_note,
+                color: Colors.white.withOpacity(0.2), size: size * 0.5),
+      ),
+    );
+  }
 }
 
-class _MiniPlayer extends StatelessWidget {
-  const _MiniPlayer();
+class MiniPlayerBar extends StatelessWidget {
+  const MiniPlayerBar({super.key});
   @override
   Widget build(BuildContext context) {
     final p = context.watch<PlayerService>();
-    final s = p.current!;
-    return Container(margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: AppTheme.surfaceHigh,
+    final s = p.current;
+    if (s == null) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.surfaceHigh,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.05))),
-      child: Material(color: Colors.transparent, borderRadius: BorderRadius.circular(14),
-        child: InkWell(borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(14),
           onTap: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const PlayerPage())),
-          child: SizedBox(height: 60, child: Row(children: [
-            const SizedBox(width: 10),
-            Container(width: 42, height: 42, decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10), color: AppTheme.surface),
-              child: ClipRRect(borderRadius: BorderRadius.circular(10),
-                child: s.cover != null ? CachedNetworkImage(imageUrl: s.cover!,
-                  fit: BoxFit.cover, errorWidget: (_, __, ___) =>
-                    const Icon(Icons.music_note))
-                  : const Icon(Icons.music_note, size: 20))),
-            const SizedBox(width: 10),
-            Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500)),
-              Text(s.singer, maxLines: 1, overflow: TextOverflow.ellipsis,
-                style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.5))),
-            ])),
-            if (p.loading) const Padding(padding: EdgeInsets.all(12),
-              child: SizedBox(width: 18, height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2)))
-            else IconButton(onPressed: p.toggle, iconSize: 22,
-              icon: Icon(p.playing ? Icons.pause_circle_filled : Icons.play_circle_filled)),
-            IconButton(onPressed: p.next, iconSize: 22, icon: const Icon(Icons.skip_next)),
-            const SizedBox(width: 4),
-          ])))),
+              MaterialPageRoute(builder: (_) => const PlayerPage())),
+          child: SizedBox(
+            height: 60,
+            child: Row(
+              children: [
+                const SizedBox(width: 10),
+                _miniCover(s.cover),
+                const SizedBox(width: 10),
+                Expanded(child: _miniInfo(s)),
+                _miniControls(p),
+                const SizedBox(width: 4),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _miniCover(String? url) {
+    return Container(
+      width: 42,
+      height: 42,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: AppTheme.surface,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: url != null
+            ? CachedNetworkImage(
+                imageUrl: url,
+                fit: BoxFit.cover,
+                errorWidget: (_, __, ___) => const Icon(Icons.music_note),
+              )
+            : const Icon(Icons.music_note, size: 20),
+      ),
+    );
+  }
+
+  Widget _miniInfo(Song s) {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          s.name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w500),
+        ),
+        Text(
+          s.singer,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+              fontSize: 11, color: Colors.white.withOpacity(0.5)),
+        ),
+      ],
+    );
+  }
+
+  Widget _miniControls(PlayerService p) {
+    if (p.loading) {
+      return const Padding(
+        padding: EdgeInsets.all(12),
+        child: SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          onPressed: p.toggle,
+          iconSize: 22,
+          icon: Icon(p.playing
+              ? Icons.pause_circle_filled
+              : Icons.play_circle_filled),
+        ),
+        IconButton(
+          onPressed: p.next,
+          iconSize: 22,
+          icon: const Icon(Icons.skip_next),
+        ),
+      ],
     );
   }
 }
