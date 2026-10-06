@@ -1,0 +1,12 @@
+{
+  "engine": {
+    "version": 10,
+    "url": "https://raw.githubusercontent.com/541889964/kugou/main/cloud/cloud.js"
+  },
+  "app": {
+    "versionCode": 10,
+    "version": "10.0.0",
+    "url": "https://github.com/541889964/kugou/releases/latest",
+    "changelog": "全设置集成版"
+  }
+}
