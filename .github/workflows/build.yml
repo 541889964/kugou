@@ -17,7 +17,7 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.27.1'
           channel: 'stable'
           cache: true
 
@@ -61,7 +61,6 @@ jobs:
             ls -la build/app/outputs/flutter-apk/ || true
             exit 1
           fi
-          echo "找到: $APK"
           cp "$APK" out/KuGou.apk
           ls -lh out/
 

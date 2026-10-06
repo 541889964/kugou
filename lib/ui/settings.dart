@@ -70,8 +70,8 @@ class _S extends State<SettingsPage> {
         Container(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: mgr.isGuest ? Colors.orange.withValues(alpha: 0.15)
-                : Colors.green.withValues(alpha: 0.15),
+            color: mgr.isGuest ? Colors.orange.withOpacity(0.15)
+                : Colors.green.withOpacity(0.15),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(children: [

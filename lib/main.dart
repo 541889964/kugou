@@ -45,9 +45,9 @@ class _OverlayAppState extends State<_OverlayApp> {
           margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.72),
+            color: Colors.black.withOpacity(0.72),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+            border: Border.all(color: Colors.white.withOpacity(0.12)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -62,7 +62,7 @@ class _OverlayAppState extends State<_OverlayApp> {
                       fontWeight: FontWeight.bold)),
               if (_next.isNotEmpty)
                 Text(_next, maxLines: 1, overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5),
+                    style: TextStyle(color: Colors.white.withOpacity(0.5),
                         fontSize: 12)),
             ],
           ),

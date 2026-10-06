@@ -28,7 +28,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: const Color(0xFF12101A),
-        indicatorColor: const Color(0xFF7C4DFF).withValues(alpha: 0.22),
+        indicatorColor: const Color(0xFF7C4DFF).withOpacity(0.22),
         elevation: 0, height: 64,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       ),

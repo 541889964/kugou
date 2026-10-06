@@ -71,7 +71,7 @@ class _F extends State<FirstLaunchPage> {
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: s ? Colors.white : Colors.white.withValues(alpha: 0.15),
+                    color: s ? Colors.white : Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: s ? Colors.white : Colors.white30, width: 2),
                   ),
@@ -101,7 +101,7 @@ class _F extends State<FirstLaunchPage> {
               style: const TextStyle(fontSize: 12.5),
               decoration: InputDecoration(
                 hintText: '粘贴小号 Cookie 解锁 VIP（不填也能听歌）',
-                fillColor: Colors.white.withValues(alpha: 0.92),
+                fillColor: Colors.white.withOpacity(0.92),
                 hintStyle: const TextStyle(color: Colors.black38),
               ),
             ),

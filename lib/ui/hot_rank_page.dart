@@ -55,7 +55,7 @@ class _HotRankPageState extends State<HotRankPage> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.4),
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4),
             blurRadius: 20, offset: const Offset(0, 8))],
         ),
         child: ClipRRect(
@@ -67,7 +67,7 @@ class _HotRankPageState extends State<HotRankPage> {
                 : _ph(),
             Container(decoration: BoxDecoration(
               gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter,
-                colors: [Colors.transparent, Colors.black.withValues(alpha: 0.85)]))),
+                colors: [Colors.transparent, Colors.black.withOpacity(0.85)]))),
             Positioned(left: 12, right: 12, bottom: 12, child: Column(
               crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Text(r.name, maxLines: 2, overflow: TextOverflow.ellipsis,
@@ -75,7 +75,7 @@ class _HotRankPageState extends State<HotRankPage> {
                         fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
                 Text('${r.songCount} 首', style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
+                    color: Colors.white.withOpacity(0.7), fontSize: 11)),
               ],
             )),
           ]),
