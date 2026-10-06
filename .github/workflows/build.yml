@@ -4,6 +4,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -28,9 +31,6 @@ jobs:
         run: |
           if [ -f android_manifest.xml ]; then
             cp android_manifest.xml android/app/src/main/AndroidManifest.xml
-            echo "✓ manifest 已替换"
-          else
-            echo "! 使用默认 manifest"
           fi
 
       - name: Deps
@@ -64,8 +64,20 @@ jobs:
           cp "$APK" out/KuGou.apk
           ls -lh out/
 
-      - uses: actions/upload-artifact@v4
+      # ⭐ 关键：直接发布到 Release
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: kugou-apk
-          path: out/KuGou.apk
-          if-no-files-found: error
+          tag_name: build-${{ github.run_number }}
+          name: KuGou Build #${{ github.run_number }}
+          body: |
+            自动构建于 ${{ github.event.head_commit.timestamp }}
+            提交: ${{ github.sha }}
+
+            **直接下载 KuGou.apk 安装**
+          files: out/KuGou.apk
+          draft: false
+          prerelease: false
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
