@@ -25,10 +25,20 @@ jobs:
         with: {name: build-error-log, path: /tmp/build.log}
       - if: steps.b.outcome == 'failure'
         run: exit 1
-      - run: |
+      - name: Find APK
+        run: |
+          echo "=== 搜索所有 APK ==="
+          find . -name "*.apk" -type f 2>/dev/null
+          APK=$(find . -name "*.apk" -type f 2>/dev/null | head -1)
+          if [ -z "$APK" ]; then
+            echo "✗ 找不到 APK"
+            ls -la build/app/outputs/ 2>/dev/null || true
+            exit 1
+          fi
+          echo "找到: $APK"
           mkdir -p out
-          APK=$(find build/app/outputs/flutter-apk -maxdepth 1 -name "*.apk" -type f | head -1)
           cp "$APK" out/KuGou.apk
+          ls -lh out/
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ github.run_number }}
