@@ -71,7 +71,7 @@ class PlayerService extends ChangeNotifier {
   Future<void> _load() async {
     final s = current; if (s == null) return;
     try {
-      final r = await KuGouApi.I.getSongUrl(s.hash, albumId: s.albumId);
+      final r = await KuGouApi.I.getSongUrl(s.hash, albumId: s.albumId, audioId: s.audioId);
       if (r == null) { errorMsg = '无法获取'; loading = false; notifyListeners(); return; }
       if (r['error'] != null) { errorMsg = r['message']?.toString() ?? '不可播'; loading = false; notifyListeners(); return; }
       final url = r['url'] as String?;

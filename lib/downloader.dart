@@ -45,7 +45,7 @@ class Downloader extends ChangeNotifier {
     try {
       if (!await _perm()) { t.status = 'failed'; t.error = '需要权限'; notifyListeners(); return false; }
       t.status = 'resolving'; notifyListeners();
-      final r = await KuGouApi.I.getSongUrl(song.hash, albumId: song.albumId);
+      final r = await KuGouApi.I.getSongUrl(song.hash, albumId: song.albumId, audioId: song.audioId);
       if (r == null || r['error'] != null) {
         t.status = 'failed';
         t.error = r?['message']?.toString() ?? '获取失败';
