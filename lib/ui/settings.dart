@@ -269,7 +269,12 @@ class _SettingsPageState extends State<SettingsPage> {
                         color: AppTheme.primary, size: 22)),
               title: const Text('检查更新',
                   style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: Text('当前 v${Bridge.I.version}',
+              subtitle: Text(
+                  Bridge.I.ready
+                      ? '引擎 v${Bridge.I.version}'
+                      : Bridge.I.backendOnline
+                          ? '后端在线 · 未加载'
+                          : '未连接后端',
                   style: const TextStyle(fontSize: 12)),
               trailing: const Icon(Icons.chevron_right),
               onTap: _checking ? null : _checkEngine),

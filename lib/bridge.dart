@@ -27,87 +27,121 @@ class Device {
 class Bridge {
   static final Bridge I = Bridge._();
   Bridge._();
+
   JavascriptRuntime? _rt;
   bool ready = false;
+  bool backendOnline = false;
   int version = 0;
   final Map<String, Map<String, dynamic>> _mem = {};
 
   static List<String> _backendUrls = [];
-  static const List<String> _fallbackUrls = [
-    'https://raw.githubusercontent.com/541889964/kugou/main/cloud/cloud.js',
-    'https://gitee.com/541889964/kugou/raw/main/cloud/cloud.js',
-  ];
 
-  String? customBackend;
-
-  Future<void> _discover() async {
+  /// 获取后端地址（可从设置自定义）
+  Future<List<String>> _candidates() async {
     final sp = await SharedPreferences.getInstance();
     final custom = sp.getString('custom_backend');
-    final candidates = <String>{
+    return <String>{
       if (custom != null && custom.isNotEmpty) custom,
       'http://127.0.0.1:3000',
-      ..._backendUrls,
       ...(sp.getStringList('backend_urls') ?? []),
-    };
+    }.toList();
+  }
 
-    for (final base in candidates) {
+  Future<void> _discover() async {
+    for (final base in await _candidates()) {
       try {
         final r = await Dio().get('$base/discover',
             options: Options(
               responseType: ResponseType.json,
               sendTimeout: const Duration(seconds: 2),
-              receiveTimeout: const Duration(seconds: 2),
-            ));
+              receiveTimeout: const Duration(seconds: 2)));
         if (r.data is Map && r.data['urls'] is List) {
           final urls = (r.data['urls'] as List)
-              .map((e) => e.toString())
-              .where((e) => e.isNotEmpty).toList();
+              .map((e) => e.toString()).where((e) => e.isNotEmpty).toList();
           if (urls.isNotEmpty) {
             _backendUrls = urls;
+            backendOnline = true;
+            final sp = await SharedPreferences.getInstance();
             await sp.setStringList('backend_urls', urls);
-            print('[Bridge] 发现后端: $urls');
+            print('[Bridge] 后端在线: $urls');
             return;
           }
         }
-      } catch (_) {
-        continue;
-      }
+      } catch (_) { continue; }
     }
+    backendOnline = false;
   }
 
+  /// 启动流程：先找后端，找不到不用缓存
   Future<void> initFromCache() async {
     final sp = await SharedPreferences.getInstance();
+    await _discover();
+
+    // 后端在线 → 拉真引擎
+    if (_backendUrls.isNotEmpty) {
+      final ok = await _pullFromBackend();
+      if (ok) {
+        print('[Bridge] 从后端加载 v$version');
+        return;
+      }
+    }
+
+    // 后端不可用 → 用缓存兜底
     final cached = sp.getString('cloud_js');
-    if (cached != null && _eval(cached)) {
+    if (cached != null && cached.isNotEmpty && _eval(cached)) {
       version = sp.getInt('engine_ver') ?? 0;
-      _discover();
+      print('[Bridge] 后端不可达，使用缓存 v$version');
       return;
     }
-    await _discover();
-    if (await refresh()) return;
-    _eval('var ENGINE_VERSION=1;function handle(o,s,a){return null;}');
+
+    // 都没 → 未初始化状态
+    ready = false;
+    version = 0;
+    print('[Bridge] 未初始化');
   }
 
-  Future<bool> refresh() async {
-    if (_backendUrls.isEmpty) await _discover();
+  Future<bool> _pullFromBackend() async {
     for (final base in _backendUrls) {
       try {
         final r = await Dio().get('$base/engine',
-            options: Options(responseType: ResponseType.plain,
-              receiveTimeout: const Duration(seconds: 8)));
+            options: Options(
+              responseType: ResponseType.plain,
+              receiveTimeout: const Duration(seconds: 10)));
         final js = r.data.toString();
         if (js.contains('function handle') && _eval(js)) {
           final sp = await SharedPreferences.getInstance();
           await sp.setString('cloud_js', js);
+          // 从后端 meta 拿真实版本
+          try {
+            final mr = await Dio().get('$base/meta',
+                options: Options(
+                  responseType: ResponseType.json,
+                  receiveTimeout: const Duration(seconds: 5)));
+            if (mr.data is Map) {
+              version = int.tryParse(
+                  '${mr.data['version'] ?? 0}') ?? version;
+              await sp.setInt('engine_ver', version);
+            }
+          } catch (_) {}
           return true;
         }
       } catch (_) { continue; }
     }
-    for (final url in _fallbackUrls) {
+    return false;
+  }
+
+  Future<bool> refresh() async {
+    if (!backendOnline) await _discover();
+    if (await _pullFromBackend()) return true;
+
+    // 兜底：GitHub
+    for (final url in const [
+      'https://raw.githubusercontent.com/541889964/kugou/main/cloud/cloud.js',
+    ]) {
       try {
-        final r = await Dio().get(url,
-            options: Options(responseType: ResponseType.plain,
-              receiveTimeout: const Duration(seconds: 15)));
+        final r = await Dio().get(url, options: Options(
+            responseType: ResponseType.plain,
+            receiveTimeout: const Duration(seconds: 15)));
         final js = r.data.toString();
         if (js.contains('function handle') && _eval(js)) {
           final sp = await SharedPreferences.getInstance();
@@ -144,6 +178,7 @@ class Bridge {
     _backendUrls = [];
     _mem.clear();
     ready = false;
+    version = 0;
   }
 
   bool _eval(String js) {
@@ -155,7 +190,8 @@ class Bridge {
       rt.onMessage('b64decode', (a) {
         try { return utf8.decode(base64.decode(_a(a))); } catch (_) { return ''; }
       });
-      rt.onMessage('now', (_) => DateTime.now().millisecondsSinceEpoch.toString());
+      rt.onMessage('now', (_) =>
+          DateTime.now().millisecondsSinceEpoch.toString());
       rt.onMessage('device', (_) => jsonEncode({
         'mid': Device.mid, 'dfid': Device.dfid, 'uuid': Device.uuid}));
       rt.onMessage('cookie', (_) => ModeManager.I.cookie);
@@ -188,10 +224,13 @@ class Bridge {
         return 'ok';
       });
       rt.evaluate(js);
-      final chk = rt.evaluate('typeof ENGINE_VERSION!=="undefined"?ENGINE_VERSION:0');
+      final chk = rt.evaluate(
+          'typeof ENGINE_VERSION!=="undefined"?ENGINE_VERSION:0');
       final v = int.tryParse(chk.stringResult) ?? 0;
       if (v <= 0) return false;
-      version = v; ready = true; return true;
+      version = v;
+      ready = true;
+      return true;
     } catch (_) { ready = false; return false; }
   }
 
