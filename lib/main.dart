@@ -72,12 +72,15 @@ class _OverlayAppState extends State<_OverlayApp> {
   }
 }
 
-void main() {
-  if (FlutterOverlayWindow.isActive()) {
-    runApp(const _OverlayApp());
-    return;
-  }
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  try {
+    final isOverlay = await FlutterOverlayWindow.isActive();
+    if (isOverlay) {
+      runApp(const _OverlayApp());
+      return;
+    }
+  } catch (_) {}
   runApp(const KuGouApp());
 }
 
