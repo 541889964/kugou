@@ -71,8 +71,8 @@ class LocalMusicScanner extends ChangeNotifier {
         if (title.contains(' - ')) {
           final parts = title.split(' - ');
           if (parts.length >= 2) {
-            singer = parts[0].trim();
-            songName = parts.sublist(1).join(' - ').trim();
+            songName = parts[0].trim();
+            singer = parts.sublist(1).join(' - ').trim();
           }
         }
         onFound(Song(hash: path.hashCode.toString(), name: songName, singer: singer,
